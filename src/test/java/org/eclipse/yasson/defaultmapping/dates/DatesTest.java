@@ -65,6 +65,44 @@ public class DatesTest {
         assertEquals(parsedDate, result.defaultFormatted);
         assertEquals(parsedDate, result.millisFormatted);
     }
+    
+    @Test
+    public void testISO_DATE() throws ParseException {
+    	final SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+        sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
+        final Date expectedDate = sdf.parse("1955-03-28");
+        
+    	// marshall ISO_DATE string to java.util.Date
+    	BasicJavaUtilDatePojo d = jsonb.fromJson("{\"date\":\"1955-03-28\"}", BasicJavaUtilDatePojo.class);
+    	assertEquals(expectedDate, d.date);
+    	
+    	// unmarshall java.util.Date to ISO_DATE string
+    	String jsonString = jsonb.toJson(d);
+    	assertEquals("{\"date\":\"1955-03-28T00:00:00Z[UTC]\"}", jsonString);
+    	
+    	// marshall again
+    	final BasicJavaUtilDatePojo d2 = jsonb.fromJson(jsonString, BasicJavaUtilDatePojo.class);
+    	assertEquals(expectedDate, d2.date);
+    }
+    
+    @Test
+    public void testISO_DATE_TIME() throws ParseException {
+    	final SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
+        sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
+        final Date expectedDate = sdf.parse("1955-03-28T12:34:56");
+        
+    	// marshall ISO_DATE string to java.util.Date
+    	BasicJavaUtilDatePojo d = jsonb.fromJson("{\"date\":\"1955-03-28T12:34:56\"}", BasicJavaUtilDatePojo.class);
+    	assertEquals(expectedDate, d.date);
+    	
+    	// unmarshall java.util.Date to ISO_DATE string
+    	String jsonString = jsonb.toJson(d);
+    	assertEquals("{\"date\":\"1955-03-28T12:34:56Z[UTC]\"}", jsonString);
+    	
+    	// marshall again
+    	final BasicJavaUtilDatePojo d2 = jsonb.fromJson(jsonString, BasicJavaUtilDatePojo.class);
+    	assertEquals(expectedDate, d2.date);
+    }
 
     @Test
     public void testCalendar() {

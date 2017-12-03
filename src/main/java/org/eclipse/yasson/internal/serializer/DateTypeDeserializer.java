@@ -16,6 +16,9 @@ package org.eclipse.yasson.internal.serializer;
 import org.eclipse.yasson.internal.model.JsonBindingModel;
 
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalAccessor;
 import java.util.Date;
@@ -29,6 +32,7 @@ import java.util.Locale;
 public class DateTypeDeserializer extends AbstractDateTimeDeserializer<Date> {
 
     private static final DateTimeFormatter DEFAULT_DATE_TIME_FORMATTER = DateTimeFormatter.ISO_DATE_TIME.withZone(UTC);
+    private static final DateTimeFormatter DEFAULT_DATE_FORMATTER = DateTimeFormatter.ISO_DATE.withZone(UTC);
 
     /**
      * Creates a new instance.
@@ -46,8 +50,15 @@ public class DateTypeDeserializer extends AbstractDateTimeDeserializer<Date> {
 
     @Override
     protected Date parseDefault(String jsonValue, Locale locale) {
-        final TemporalAccessor parsed = DEFAULT_DATE_TIME_FORMATTER.withLocale(locale).parse(jsonValue);
-        return new Date(Instant.from(parsed).toEpochMilli());
+    	if(jsonValue.contains("T") || jsonValue.contains("t")) {
+    		// If time information is present, parse as ISO_DATE_TIME
+    		final TemporalAccessor parsed = DEFAULT_DATE_TIME_FORMATTER.withLocale(locale).parse(jsonValue);
+    		return new Date(Instant.from(parsed).toEpochMilli());
+    	} else {
+    		// If no time info is present, parse as ISO_DATE
+    		final LocalDateTime ldt = LocalDate.parse(jsonValue, DEFAULT_DATE_FORMATTER.withLocale(locale)).atStartOfDay();
+    		return new Date(ldt.toInstant(ZoneOffset.UTC).toEpochMilli());
+    	}
     }
 
     @Override

@@ -28,7 +28,7 @@ import java.util.Locale;
  */
 public class DateTypeSerializer extends AbstractDateTimeSerializer<Date> {
 
-    private DateTimeFormatter DEFAULT_FORMATTER = DateTimeFormatter.ISO_DATE_TIME.withZone(UTC);
+    private static final DateTimeFormatter DEFAULT_FORMATTER = DateTimeFormatter.ISO_DATE_TIME.withZone(UTC);
 
     /**
      * Construct serializer with its class.
