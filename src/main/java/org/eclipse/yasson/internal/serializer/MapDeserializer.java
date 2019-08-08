@@ -20,7 +20,9 @@ import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.EnumMap;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
@@ -48,7 +50,8 @@ public class MapDeserializer<T extends Map<?,?>> extends AbstractContainerDeseri
     private final Type mapKeyRuntimeType;
     private final Type mapValueRuntimeType;
     private final T instance;
-    
+    private static final Map<Class<?>, Optional<Method>> stringableMethodCache = new IdentityHashMap<>();
+
     /**
      * Create instance of current item with its builder.
      *
@@ -116,34 +119,43 @@ public class MapDeserializer<T extends Map<?,?>> extends AbstractContainerDeseri
             ((Map<String, V>) getInstance(null)).put(key, value);
         }
     }
-    
+
     @SuppressWarnings("unchecked")
     private <K> K asStringable(Class<K> clazz, String value) {
-        Method found = null;
-        try {
-            Method m = clazz.getMethod("valueOf", String.class);
-            if (Modifier.isStatic(m.getModifiers()) && Modifier.isPublic(m.getModifiers()))
-                found = m;
-        } catch (NoSuchMethodException ignore) {
-        }
-        if (found == null) {
-        try {
-            Method m = clazz.getMethod("fromString", String.class);
-            if (Modifier.isStatic(m.getModifiers()) && Modifier.isPublic(m.getModifiers()))
-                found = m;
-        } catch (NoSuchMethodException ignore) {
-        }
-        }
-        if (found != null) {
+        Optional<Method> method = stringableMethodCache.computeIfAbsent(clazz, c -> {
+            Method valueOf = getStaticPublicMethod(c, "valueOf");
+            if (valueOf != null) {
+                return Optional.of(valueOf);
+            }
+            Method fromString = getStaticPublicMethod(c, "fromString");
+            if (fromString != null) {
+                return Optional.of(fromString);
+            }
+            return Optional.empty();
+        });
+
+        if (method.isPresent()) {
             try {
-                return (K) found.invoke(null, value);
+                return (K) method.get().invoke(null, value);
             } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
                 throw new JsonbException(Messages.getMessage(MessageKeys.DESERIALIZE_VALUE_ERROR, value, clazz), e);
             }
         }
         return null;
     }
-    
+
+    private Method getStaticPublicMethod(Class<?> clazz, String name) {
+        try {
+            Method method = clazz.getMethod(name, String.class);
+            if (Modifier.isStatic(method.getModifiers()) && Modifier.isPublic(method.getModifiers())) {
+                method.setAccessible(true);
+                return method;
+            }
+        } catch (NoSuchMethodException ignore) {
+        }
+        return null;
+    }
+
     @Override
     protected void deserializeNext(JsonParser parser, Unmarshaller context) {
         final JsonbDeserializer<?> deserializer = newCollectionOrMapItem(mapValueRuntimeType, context.getJsonbContext());
